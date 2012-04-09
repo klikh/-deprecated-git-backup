@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 def backup_tracking_branches(tracking_branches)
-  fbdir = File.join($backupDir), "tracking_branches"
+  fbdir = File.join($backupDir, "tracking_branches")
   Dir.mkdir(fbdir)
   tracking_branches.each do |branch, tracked|
     bdir = File.join(fbdir, branch)
@@ -12,7 +12,7 @@ end
 
 # TODO for now comparing only with master
 def backup_feature_branches(feature_branches)
-  fbdir = File.join($backupDir), "feature_branches"
+  fbdir = File.join($backupDir, "feature_branches")
   Dir.mkdir(fbdir)
   feature_branches.each do |branch|
     bdir = File.join(fbdir, branch)
@@ -26,11 +26,29 @@ def backup_local
   `git diff --cached > #{$backupDir}/staged_local_changes.patch`
 end
 
+def backup_stash
+  numstashes = `git stash list`.chomp.split("\n").size
+  return if numstashes == 0
+
+  puts "saving stashes (#{numstashes})..."
+
+  sdir = File.join($backupDir, "stash")
+  if File.exists?(sdir) then `rm -rf #{sdir}` end
+  Dir.mkdir(sdir)
+  numstashes.times do |i|
+    num = format("%04d", i)
+    `git stash show -p stash@{#{i}} > #{sdir}/#{num}_stash.patch`
+  end
+end
+
 ENV['PATH'] += ":/opt/local/bin" #TODO: remove, this is for easier debugging only
 
 Dir.chdir "/Users/loki/idea/community" #TODO: remove, this is for easier debugging only
 
-$backupDir = "/Users/loki/temp" #TODO: read from args or env var
+timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
+$backupDir = "/Users/loki/temp/gitbackup_#{timestamp}" #TODO: read from args or env var
+
+Dir.mkdir($backupDir)
 
 branches = []
 `git branch`.split("\n").each do |line|
@@ -59,6 +77,8 @@ end
 puts tracking_branches.inspect
 puts feature_branches
 
+backup_stash
+exit
 backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
