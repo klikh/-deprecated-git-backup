@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 
 def backup_tracking_branches(tracking_branches)
+  return if tracking_branches.empty?
+  puts "Saving tracking branches (#{tracking_branches.size})..."
+
   fbdir = File.join($backupDir, "tracking_branches")
   Dir.mkdir(fbdir)
   tracking_branches.each do |branch, tracked|
@@ -12,6 +15,9 @@ end
 
 # TODO for now comparing only with master
 def backup_feature_branches(feature_branches)
+  return if feature_branches.empty?
+  puts "Saving feature branches (#{feature_branches.size})..."
+
   fbdir = File.join($backupDir, "feature_branches")
   Dir.mkdir(fbdir)
   feature_branches.each do |branch|
@@ -22,6 +28,7 @@ def backup_feature_branches(feature_branches)
 end
 
 def backup_local
+  puts "Saving local changes..."
   `git diff > #{$backupDir}/unstaged_local_changes.patch`
   `git diff --cached > #{$backupDir}/staged_local_changes.patch`
 end
@@ -48,7 +55,7 @@ Dir.chdir "/Users/loki/idea/community" #TODO: remove, this is for easier debuggi
 timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
 $backupDir = "/Users/loki/temp/gitbackup_#{timestamp}" #TODO: read from args or env var
 
-Dir.mkdir($backupDir)
+puts "Collecting information..."
 
 branches = []
 `git branch`.split("\n").each do |line|
@@ -74,11 +81,13 @@ branches.each do | branch|
   end
 end
 
-puts tracking_branches.inspect
-puts feature_branches
+#puts tracking_branches.inspect
+#puts feature_branches
 
-backup_stash
-exit
+Dir.mkdir($backupDir)
+
 backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
+backup_stash
+puts "Finished."
