@@ -8,7 +8,10 @@ def backup_tracking_branches(tracking_branches)
   Dir.mkdir(fbdir)
   tracking_branches.each do |branch, tracked|
     bdir = File.join(fbdir, branch)
+    puts bdir
+    puts "#{tracked}..#{branch}"
     Dir.mkdir(bdir)    
+    puts "running git format-patch --output-dir=#{bdir} #{tracked}..#{branch}"
     puts `git format-patch --output-dir=#{bdir} #{tracked}..#{branch}`
   end
 end
@@ -28,8 +31,9 @@ def backup_feature_branches(feature_branches)
 end
 
 def backup_local
-  puts "Saving local changes..."
+  puts "Saving local unstaged changes..."
   `git diff > #{$backupDir}/unstaged_local_changes.patch`
+  puts "Saving local staged changes..."
   `git diff --cached > #{$backupDir}/staged_local_changes.patch`
 end
 
@@ -37,10 +41,8 @@ def backup_stash
   numstashes = `git stash list`.chomp.split("\n").size
   return if numstashes == 0
 
-  puts "saving stashes (#{numstashes})..."
-
+  puts "Saving stashes (#{numstashes})..."
   sdir = File.join($backupDir, "stash")
-  if File.exists?(sdir) then `rm -rf #{sdir}` end
   Dir.mkdir(sdir)
   numstashes.times do |i|
     num = format("%04d", i)
@@ -81,12 +83,12 @@ branches.each do | branch|
   end
 end
 
-#puts tracking_branches.inspect
-#puts feature_branches
+puts tracking_branches.inspect
+puts feature_branches
 
 Dir.mkdir($backupDir)
 
-backup_local
+#backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
 backup_stash
