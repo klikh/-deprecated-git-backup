@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+
+Dir.chdir "/Users/loki/idea_master/community"
+
+branches = []
+`git branch`.split("\n").each do |line|
+  if line.start_with?("* ")
+    branches << line[2..-1]
+  else 
+    branches << line[2..-1]
+  end
+end
+
+tracking_branches = {}
+feature_branches = []
+
+branches.each do | branch|
+  remote = `git config branch.#{branch}.remote`.chomp
+  rembranch = `git config branch.#{branch}.merge`.chomp
+  if not remote.empty? and not rembranch.empty?
+    rembranch["refs/heads/"] = ""
+    rembranch = remote + "/" + rembranch
+    tracking_branches[branch] = rembranch
+  else
+    feature_branches << branch
+  end
+end
+
+puts tracking_branches.inspect
+#puts feature_branches
+
+exit
+`git diff > unstaged_local_changes.patch`
+`git diff --cached > staged_local_changes.patch`
+`git format-patch --output-dir branch master..`
