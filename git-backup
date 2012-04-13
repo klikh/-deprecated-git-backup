@@ -1,10 +1,31 @@
 #!/usr/bin/env ruby
 
+require 'trollop'
+
+opts = Trollop::options do
+  banner "Usage: #{File.basename(__FILE__)} <output-dir>"
+
+  opt :untracked, "Backup untracked files"
+  opt :verbose, "Be verbose" 
+end
+
+Trollop::die "Specify output directory for storing the backup" if ARGV.empty?
+Trollop::die "Too many arguments #{ARGV.inspect}" if ARGV.size > 1
+
+$backup_dir = ARGV[0]
+
+Trollop::die "Output dir #{$backup_dir} doesn't exist" unless File.exists? $backup_dir
+Trollop::die "Output dir #{$backup_dir} is not a directory" unless File.directory?
+
+def run(command)
+
+end
+
 def backup_tracking_branches(tracking_branches)
   return if tracking_branches.empty?
   puts "Saving tracking branches (#{tracking_branches.size})..."
 
-  fbdir = File.join($backupDir, "tracking_branches")
+  fbdir = File.join($backup_dir, "tracking_branches")
   Dir.mkdir(fbdir)
   tracking_branches.each do |branch, tracked|
     bdir = File.join(fbdir, branch)
@@ -21,7 +42,7 @@ def backup_feature_branches(feature_branches)
   return if feature_branches.empty?
   puts "Saving feature branches (#{feature_branches.size})..."
 
-  fbdir = File.join($backupDir, "feature_branches")
+  fbdir = File.join($backup_dir, "feature_branches")
   Dir.mkdir(fbdir)
   feature_branches.each do |branch|
     bdir = File.join(fbdir, branch)
@@ -32,9 +53,9 @@ end
 
 def backup_local
   puts "Saving local unstaged changes..."
-  `git diff > #{$backupDir}/unstaged_local_changes.patch`
+  `git diff > #{$backup_dir}/unstaged_local_changes.patch`
   puts "Saving local staged changes..."
-  `git diff --cached > #{$backupDir}/staged_local_changes.patch`
+  `git diff --cached > #{$backup_dir}/staged_local_changes.patch`
 end
 
 def backup_stash
@@ -42,7 +63,7 @@ def backup_stash
   return if numstashes == 0
 
   puts "Saving stashes (#{numstashes})..."
-  sdir = File.join($backupDir, "stash")
+  sdir = File.join($backup_dir, "stash")
   Dir.mkdir(sdir)
   numstashes.times do |i|
     num = format("%04d", i)
@@ -52,10 +73,10 @@ end
 
 ENV['PATH'] += ":/opt/local/bin" #TODO: remove, this is for easier debugging only
 
-Dir.chdir "/Users/loki/idea/community" #TODO: remove, this is for easier debugging only
+#Dir.chdir "/Users/loki/idea/community" #TODO: remove, this is for easier debugging only
 
 timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
-$backupDir = "/Users/loki/temp/gitbackup_#{timestamp}" #TODO: read from args or env var
+$backup_dir = "/Users/loki/temp/gitbackup_#{timestamp}" #TODO: read from args or env var
 
 puts "Collecting information..."
 
@@ -75,7 +96,7 @@ branches.each do | branch|
   remote = `git config branch.#{branch}.remote`.chomp
   rembranch = `git config branch.#{branch}.merge`.chomp
   if not remote.empty? and not rembranch.empty?
-    rembranch["refs/heads/"] = ""
+    rembranch["refs/heads/"] = "" if rembranch.start_with? "refs/heads"
     rembranch = remote + "/" + rembranch
     tracking_branches[branch] = rembranch
   else
@@ -86,7 +107,7 @@ end
 puts tracking_branches.inspect
 puts feature_branches
 
-Dir.mkdir($backupDir)
+Dir.mkdir($backup_dir)
 
 #backup_local
 backup_tracking_branches(tracking_branches)
