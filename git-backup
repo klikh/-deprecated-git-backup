@@ -5,39 +5,49 @@ require 'trollop'
 opts = Trollop::options do
   banner "Usage: #{File.basename(__FILE__)} <output-dir>"
 
+  opt :quite, "Be $quite - no output at all"
   opt :untracked, "Backup untracked files"
-  opt :verbose, "Be verbose" 
+  opt :verbose, "Be $verbose" 
+  opt :zip, "Compress the output to a zip-archieve"
 end
 
 Trollop::die "Specify output directory for storing the backup" if ARGV.empty?
 Trollop::die "Too many arguments #{ARGV.inspect}" if ARGV.size > 1
 
-$backup_dir = ARGV[0]
+backup_dir_holder = ARGV[0]
+timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
+$backup_dir = File.join(backup_dir_holder, "gitbackup_#{File.basename(Dir.pwd)}_#{timestamp}")
 
-Trollop::die "Output dir #{$backup_dir} doesn't exist" unless File.exists? $backup_dir
-Trollop::die "Output dir #{$backup_dir} is not a directory" unless File.directory?
+Trollop::die "Output dir #{backup_dir_holder} doesn't exist" unless File.exists? backup_dir_holder
+Trollop::die "Output dir #{backup_dir_holder} is not a directory" unless File.directory? backup_dir_holder
+
+$verbose = opts[:verbose]
+$quite = opts[:quite]
 
 def run(command)
+  puts command if $verbose
+  output = system(command)
+  puts output if $verbose
+end
 
+def putq(string)
+  puts string unless $quite
 end
 
 def backup_tracking_branches(tracking_branches)
   return if tracking_branches.empty?
-  puts "Saving tracking branches (#{tracking_branches.size})..."
+  putq "Saving tracking branches (#{tracking_branches.size})..."
 
   fbdir = File.join($backup_dir, "tracking_branches")
   Dir.mkdir(fbdir)
   tracking_branches.each do |branch, tracked|
     bdir = File.join(fbdir, branch)
-    puts bdir
-    puts "#{tracked}..#{branch}"
     Dir.mkdir(bdir)    
-    puts "running git format-patch --output-dir=#{bdir} #{tracked}..#{branch}"
-    puts `git format-patch --output-dir=#{bdir} #{tracked}..#{branch}`
+    run "git format-patch --output-dir=#{bdir} #{tracked}..#{branch}"
   end
 end
 
-# TODO for now comparing only with master
+# TODO now comparing only with master, should find the closest tracking branch
 def backup_feature_branches(feature_branches)
   return if feature_branches.empty?
   puts "Saving feature branches (#{feature_branches.size})..."
@@ -47,15 +57,15 @@ def backup_feature_branches(feature_branches)
   feature_branches.each do |branch|
     bdir = File.join(fbdir, branch)
     Dir.mkdir(bdir)
-    puts `git format-patch --output-dir=#{bdir} master..#{branch}`
+    run "git format-patch --output-dir=#{bdir} master..#{branch}"
   end
 end
 
 def backup_local
-  puts "Saving local unstaged changes..."
-  `git diff > #{$backup_dir}/unstaged_local_changes.patch`
-  puts "Saving local staged changes..."
-  `git diff --cached > #{$backup_dir}/staged_local_changes.patch`
+  putq "Saving local unstaged changes..."
+  run "git diff > #{$backup_dir}/unstaged_local_changes.patch"
+  putq "Saving local staged changes..."
+  run "git diff --cached > #{$backup_dir}/staged_local_changes.patch"
 end
 
 def backup_stash
@@ -67,18 +77,11 @@ def backup_stash
   Dir.mkdir(sdir)
   numstashes.times do |i|
     num = format("%04d", i)
-    `git stash show -p stash@{#{i}} > #{sdir}/#{num}_stash.patch`
+    run "git stash show -p stash@{#{i}} > #{sdir}/#{num}_stash.patch"
   end
 end
 
-ENV['PATH'] += ":/opt/local/bin" #TODO: remove, this is for easier debugging only
-
-#Dir.chdir "/Users/loki/idea/community" #TODO: remove, this is for easier debugging only
-
-timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
-$backup_dir = "/Users/loki/temp/gitbackup_#{timestamp}" #TODO: read from args or env var
-
-puts "Collecting information..."
+putq "Collecting information..."
 
 branches = []
 `git branch`.split("\n").each do |line|
@@ -104,13 +107,14 @@ branches.each do | branch|
   end
 end
 
-puts tracking_branches.inspect
-puts feature_branches
+puts "Tracking branches: #{tracking_branches.inspect}" if $verbose
+puts "Feature branches: #{feature_branches.inspect}" if $verbose
 
 Dir.mkdir($backup_dir)
 
-#backup_local
+backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
 backup_stash
-puts "Finished."
+putq "Finished."
+puts `tree #{$backup_dir}` if $verbose
