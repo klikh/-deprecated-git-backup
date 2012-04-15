@@ -5,7 +5,10 @@ require 'trollop'
 $program = File.basename(__FILE__)
 
 opts = Trollop::options do
-  banner "Usage: #$program [OPTIONS] <output-dir>"
+  banner <<-EOT
+    Usage: #$program [OPTIONS] [<output-dir>]
+    You may omit <output-dir>, but then you have to define GIT_BACKUP_DIR environment variable
+  EOT
 
   opt :quite, "Be $quite - no output at all"
   opt :untracked, "Backup untracked files. Note: the path is not preserved, thus only one of files with the same name is stored."
@@ -13,10 +16,11 @@ opts = Trollop::options do
   opt :zip, "Compress the output to a zip-archieve"
 end
 
-Trollop::die "Specify output directory for storing the backup" if ARGV.empty?
+$backup_dir_holder = ARGV.empty? ? ENV['GIT_BACKUP_DIR'] : File.realpath(ARGV[0])
+Trollop::die "Specify output directory for storing the backup" if $backup_dir_holder == nil or $backup_dir_holder.empty?
+
 Trollop::die "Too many arguments #{ARGV.inspect}" if ARGV.size > 1
 
-$backup_dir_holder = File.realpath(ARGV[0])
 Trollop::die "Output dir #$backup_dir_holder doesn't exist" unless File.exists? $backup_dir_holder
 Trollop::die "Output dir #$backup_dir_holder is not a directory" unless File.directory? $backup_dir_holder
 
@@ -146,6 +150,7 @@ puts "Feature branches: #{feature_branches.inspect}" if $verbose
 
 # backup
 Dir.mkdir($backup_dir)
+puts "Backing up to #$backup_dir_holder" if $verbose
 backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
