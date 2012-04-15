@@ -14,15 +14,23 @@ end
 Trollop::die "Specify output directory for storing the backup" if ARGV.empty?
 Trollop::die "Too many arguments #{ARGV.inspect}" if ARGV.size > 1
 
-backup_dir_holder = ARGV[0]
-timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
-$backup_dir = File.join(backup_dir_holder, "gitbackup_#{File.basename(Dir.pwd)}_#{timestamp}")
+$backup_dir_holder = ARGV[0]
+Trollop::die "Output dir #$backup_dir_holder doesn't exist" unless File.exists? $backup_dir_holder
+Trollop::die "Output dir #$backup_dir_holder is not a directory" unless File.directory? $backup_dir_holder
 
-Trollop::die "Output dir #{backup_dir_holder} doesn't exist" unless File.exists? backup_dir_holder
-Trollop::die "Output dir #{backup_dir_holder} is not a directory" unless File.directory? backup_dir_holder
+timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
+$backup_name = "gitbackup_#{File.basename(Dir.pwd)}_#{timestamp}"
 
 $verbose = opts[:verbose]
 $quite = opts[:quite]
+$zip = opts[:zip]
+
+$backup_dir = if ($zip)
+  require 'tmpdir'
+  File.join(Dir.tmpdir, $backup_name)
+else
+  File.join($backup_dir_holder, $backup_name)
+end
 
 def run(command)
   puts command if $verbose
@@ -110,11 +118,18 @@ end
 puts "Tracking branches: #{tracking_branches.inspect}" if $verbose
 puts "Feature branches: #{feature_branches.inspect}" if $verbose
 
+# backup
 Dir.mkdir($backup_dir)
-
 backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
 backup_stash
+
+# zip
+if $zip
+  $zipfile = "#{File.join($backup_dir_holder, $backup_name)}.zip"
+  run "zip -r #$zipfile #$backup_dir"
+end
+
 putq "Finished."
-puts `tree #{$backup_dir}` if $verbose
+puts $zip ?  `unzip -l #$zipfile` : `tree #$backup_dir` if $verbose
