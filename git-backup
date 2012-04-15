@@ -127,8 +127,9 @@ backup_stash
 
 # zip
 if $zip
+  Dir.chdir Dir.tmpdir
   $zipfile = "#{File.join($backup_dir_holder, $backup_name)}.zip"
-  run "zip -r #$zipfile #$backup_dir"
+  run "zip -r #$zipfile #$backup_name"
 end
 
 putq "Finished."
