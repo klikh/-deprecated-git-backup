@@ -1,10 +1,15 @@
-This script is for backing up all Git entities that were not pushed to a remote.
-That is:
-* non-staged modifications
-* untracked files
-* staged modifications
-* non-pushed commits on all local branches that track remote branches
-* commits on all local non-tracking branches, that are not contained in any tracking branch
-* all stashes
+The purpose of git-backup is to backup all Git entities that were not pushed to a remote.
+These are:
+* non-staged modifications;
+* staged modifications;
+* untracked files (if the option is given);
+* non-pushed commits on all local branches that track remote branches;
+* commits on all local non-tracking branches, that are not contained in any tracking branch (current they are compared only with master);
+* all stashes.
 
+REQUIREMENTS:
+* Ruby. Tested only under 1.9.3. Don't know if it works on 1.8.7 or other versions.
+* Git. And it must be in the PATH.
+* RubyGem trollop
+* zip native utility, and it also should be in the PATH. You don't need this if you don't wanna use "--zip".
 
