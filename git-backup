@@ -2,11 +2,13 @@
 
 require 'trollop'
 
+$program = File.basename(__FILE__)
+
 opts = Trollop::options do
-  banner "Usage: #{File.basename(__FILE__)} <output-dir>"
+  banner "Usage: #$program [OPTIONS] <output-dir>"
 
   opt :quite, "Be $quite - no output at all"
-  opt :untracked, "Backup untracked files"
+  opt :untracked, "Backup untracked files. Note: the path is not preserved, thus only one of files with the same name is stored."
   opt :verbose, "Be $verbose" 
   opt :zip, "Compress the output to a zip-archieve"
 end
@@ -18,10 +20,22 @@ $backup_dir_holder = File.realpath(ARGV[0])
 Trollop::die "Output dir #$backup_dir_holder doesn't exist" unless File.exists? $backup_dir_holder
 Trollop::die "Output dir #$backup_dir_holder is not a directory" unless File.directory? $backup_dir_holder
 
+# it checks if we call from a Git repo; 
+# it is also needed for untracked files, because they are filtered out by current dir
+def chdir_to_git_root
+  until Dir.entries(Dir.pwd).include?(".git")
+    Trollop::die "#$program should be called from a Git repository" if Dir.pwd == "/" 
+    Dir.chdir ".."
+  end
+end
+
+chdir_to_git_root 
+
 timestamp = Time.now.strftime("%Y-%m-%d-%H-%M-%S")
 $backup_name = "gitbackup_#{File.basename(Dir.pwd)}_#{timestamp}"
 
 $verbose = opts[:verbose]
+$untracked = opts[:untracked]
 $quite = opts[:quite]
 $zip = opts[:zip]
 
@@ -89,6 +103,18 @@ def backup_stash
   end
 end
 
+def backup_untracked
+  files = `git ls-files -o`.chomp.split("\n")
+  return if files.empty?
+  putq "Saving untracked files (#{files.size}) ..."
+
+  sdir = File.join($backup_dir, "untracked")
+  Dir.mkdir sdir
+  files.each do |file|
+    FileUtils.cp file, sdir, :verbose => $verbose
+  end
+end
+
 putq "Collecting information..."
 
 branches = []
@@ -124,6 +150,7 @@ backup_local
 backup_tracking_branches(tracking_branches)
 backup_feature_branches(feature_branches)
 backup_stash
+backup_untracked if $untracked
 
 # zip
 if $zip
