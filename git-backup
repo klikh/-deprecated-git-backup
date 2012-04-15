@@ -14,7 +14,7 @@ end
 Trollop::die "Specify output directory for storing the backup" if ARGV.empty?
 Trollop::die "Too many arguments #{ARGV.inspect}" if ARGV.size > 1
 
-$backup_dir_holder = ARGV[0]
+$backup_dir_holder = File.realpath(ARGV[0])
 Trollop::die "Output dir #$backup_dir_holder doesn't exist" unless File.exists? $backup_dir_holder
 Trollop::die "Output dir #$backup_dir_holder is not a directory" unless File.directory? $backup_dir_holder
 
