@@ -7,12 +7,12 @@ $program = File.basename(__FILE__)
 opts = Trollop::options do
   banner <<-EOT
     Usage: #$program [OPTIONS] [<output-dir>]
-    You may omit <output-dir>, but then you have to define GIT_BACKUP_DIR environment variable
+    You may omit <output-dir>, if you define GIT_BACKUP_DIR environment variable
   EOT
 
-  opt :quite, "Be $quite - no output at all"
+  opt :quite, "Be quite - no output at all"
   opt :untracked, "Backup untracked files. Note: the path is not preserved, thus only one of files with the same name is stored."
-  opt :verbose, "Be $verbose" 
+  opt :verbose, "Be verbose" 
   opt :zip, "Compress the output to a zip-archieve"
 end
 
