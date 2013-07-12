@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'trollop'
+require 'fileutils'
 
 $program = File.basename(__FILE__)
 
@@ -65,10 +66,10 @@ def backup_tracking_branches(tracking_branches)
   putq "Saving tracking branches (#{tracking_branches.size})..."
 
   fbdir = File.join($backup_dir, "tracking_branches")
-  Dir.mkdir(fbdir)
+  FileUtils.mkdir_p(fbdir)
   tracking_branches.each do |branch, tracked|
     bdir = File.join(fbdir, branch)
-    Dir.mkdir(bdir)    
+    FileUtils.mkdir_p(bdir)    
     run "git format-patch --output-dir=#{bdir} #{tracked}..#{branch}"
   end
 end
@@ -79,10 +80,10 @@ def backup_feature_branches(feature_branches)
   puts "Saving feature branches (#{feature_branches.size})..."
 
   fbdir = File.join($backup_dir, "feature_branches")
-  Dir.mkdir(fbdir)
+  FileUtils.mkdir_p(fbdir)
   feature_branches.each do |branch|
     bdir = File.join(fbdir, branch)
-    Dir.mkdir(bdir)
+    FileUtils.mkdir_p(bdir)
     run "git format-patch --output-dir=#{bdir} master..#{branch}"
   end
 end
@@ -149,7 +150,7 @@ puts "Tracking branches: #{tracking_branches.inspect}" if $verbose
 puts "Feature branches: #{feature_branches.inspect}" if $verbose
 
 # backup
-Dir.mkdir($backup_dir)
+FileUtils.mkdir_p($backup_dir)
 puts "Backing up to #$backup_dir_holder" if $verbose
 backup_local
 backup_tracking_branches(tracking_branches)
