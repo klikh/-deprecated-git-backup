@@ -1,3 +1,5 @@
+DEPRECATED: use feature branches.
+
 git-backup is a utility to backup all Git entities that were not pushed to a remote as Git patches and store them to the specified place.
 These are:
 * non-staged modifications;
